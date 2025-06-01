@@ -21,7 +21,7 @@ def construct_prompts(entity: DataPoint) -> tuple[str, str, str]:
 
 class SyntheticDataGenerator(GPT):
     def __init__(
-        self, model: AutoModelForCausalLM, endpoint_url: str, **kwargs
+        self, model: AutoModelForCausalLM, endpoint_url: str, endpoint_api_key: str, **kwargs
     ) -> None:
         self.system_prompt = """You are a AI system that generates synthetic data examples in JSON format."""
 
@@ -158,7 +158,7 @@ class SyntheticDataGenerator(GPT):
             "political party",
         ]
 
-        super().__init__(model, endpoint_url, **kwargs)
+        super().__init__(model, endpoint_url, endpoint_api_key=endpoint_api_key, **kwargs)
 
     def get_instructions(self):
         return [
@@ -183,7 +183,8 @@ class SyntheticDataGenerator(GPT):
         gpt_output = self.api_call_chat(messages)
 
         gpt_output = self.api_call_chat(messages)
-        entity = Entity(**json.loads(gpt_output))
+        print(gpt_output)
+        entity = Entity(**json.loads(gpt_output.replace("```","").replace("json","").strip()))
         return entity
 
     def generate_related_data(self, entity: Entity) -> Entity:
@@ -199,7 +200,8 @@ class SyntheticDataGenerator(GPT):
         ]
 
         gpt_output = self.api_call_chat(prompt)
-        entity = Entity(**json.loads(gpt_output))
+        print(gpt_output)
+        entity = Entity(**json.loads(gpt_output.replace("```","").replace("json","").strip()))
 
         return entity
 
@@ -235,7 +237,7 @@ class SyntheticDataGenerator(GPT):
             try:
                 prompt = (
                     "Generate an extended Q and an A for this pair: "
-                    + f"Q: {data.Q}\nA: {data.A}"
+                    + f"Q: {data.Q}\nA: {data.A}" + "**Please generate in the format of**:\nQ: ... \nA: ..."
                 )
                 gpt_output = self.generate_response(prompt)
                 extended_q = re.findall(r"Q: (.*)", gpt_output)[0]
@@ -265,9 +267,10 @@ class SyntheticDataGenerator(GPT):
 
 def parser_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="gpt-4o")
+    parser.add_argument("--model_name", type=str, default="deepseek-ai/DeepSeek-V3")
     parser.add_argument("--endpoint_url", type=str, required=True)
-    parser.add_argument("--output_path", type=str, default="dataset")
+    parser.add_argument("--endpoint_api_key", type=str, required=True)
+    parser.add_argument("--output_path", type=str, default="/data/haoyuhuang/data/KBLaM/dataset")
     parser.add_argument("--generate_related_people", type=bool, default=True)
     parser.add_argument(
         "--raw_output_file", type=str, default="synthetic_data_raw.json"
@@ -287,7 +290,7 @@ def parser_args():
 if __name__ == "__main__":
     args = parser_args()
 
-    data_generator = SyntheticDataGenerator(args.model_name, args.endpoint_url)
+    data_generator = SyntheticDataGenerator(args.model_name, args.endpoint_url, args.endpoint_api_key)
 
     os.makedirs(args.output_path, exist_ok=True)
 
@@ -302,7 +305,7 @@ if __name__ == "__main__":
         entity_list = []
         for seed in range(1):
             data_generator.set_seed(seed)
-            for instruction in tqdm(data_generator.get_instructions()):
+            for instruction in tqdm(data_generator.get_instructions()[:10]):
                 try:
                     entity = data_generator.generate_entity(instruction)
                 except Exception as e:
@@ -324,6 +327,7 @@ if __name__ == "__main__":
 
     QA_output_file = os.path.join(args.output_path, args.output_file)
 
+    # post-process QA dataset
     if os.path.exists(QA_output_file):
         with open(QA_output_file, "r") as file:
             dataset = [DataPoint(**json.loads(line)) for line in file]
@@ -332,11 +336,13 @@ if __name__ == "__main__":
         for data in dataset:
             save_entity(data, QA_output_file)
 
-    perturbed_dataset = data_generator.perturbe_names(dataset)
+    # perturb QA dataset, rename the name in the question
+    perturbed_dataset = data_generator.perturb_names(dataset)
 
     for data in perturbed_dataset:
         save_entity(data, os.path.join(args.output_path, args.perturbed_output_file))
 
+    # augment QA dataset
     dataset = data_generator.augmenta_data_with_synthetic_QA(dataset)
     for data in dataset:
         save_entity(data, os.path.join(args.output_path, args.augmented_output_file))

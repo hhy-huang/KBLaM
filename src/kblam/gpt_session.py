@@ -9,9 +9,9 @@ from azure.identity import (
     TokenCachePersistenceOptions,
     get_bearer_token_provider,
 )
-from openai import AzureOpenAI
+from openai import AzureOpenAI, OpenAI
 
-valid_models = ["gpt-4o", "ada-embeddings", "text-embedding-3-large"]
+valid_models = ["gpt-4o", "ada-embeddings", "text-embedding-3-large", "meta-llama/Meta-Llama-3.1-8B-Instruct", "deepseek-ai/DeepSeek-V3"]
 
 
 class GPT:
@@ -19,6 +19,7 @@ class GPT:
         self,
         model_name: str,
         endpoint_url: str,
+        endpoint_api_key: str,
         api_version: str = "2024-02-15-preview",
         system_msg: str = "You are an AI assistant.",
         max_retries: int = 12,
@@ -38,10 +39,15 @@ class GPT:
             self._get_credential(), "https://cognitiveservices.azure.com/.default"
         )
 
-        self.OA_client = AzureOpenAI(
-            azure_endpoint=endpoint_url,
-            api_version=api_version,
-            azure_ad_token_provider=token_provider,
+        # self.OA_client = AzureOpenAI(
+        #     azure_endpoint=endpoint_url,
+        #     api_version=api_version,
+        #     azure_ad_token_provider=token_provider,
+        # )
+
+        self.openai_client = OpenAI(
+            api_key=endpoint_api_key,
+            base_url=endpoint_url,
         )
 
         self.max_retries = max_retries
@@ -88,7 +94,7 @@ class GPT:
 
     def api_call_chat(self, messages: list[dict]) -> str | None:
         for _ in range(self.max_retries):
-            completion = self.OA_client.chat.completions.create(
+            completion = self.openai_client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
                 temperature=self.temperature,
@@ -104,7 +110,7 @@ class GPT:
 
     def _api_call_embedding(self, text: str) -> list[float] | None:
         for _ in range(self.max_retries):
-            embedding = self.OA_client.embeddings.create(
+            embedding = self.openai_client.embeddings.create(
                 input=text, model=self.model_name
             )
             if embedding:
