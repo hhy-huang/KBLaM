@@ -26,7 +26,7 @@ def parser_args():
         required=False,
         help="Path to the dataset in JSON format.",
     )
-    parser.add_argument("--output_path", type=str, default="dataset")
+    parser.add_argument("--output_path", type=str, default="/data/haoyuhuang/data/KBLaM/dataset/")
 
     args = parser.parse_args()
     return args
@@ -50,7 +50,7 @@ def compute_embeddings(
         for i in range(0, len(all_elements), batch_size)
     ]
 
-    model = SentenceTransformer(encoder_model_spec, device="cuda")
+    model = SentenceTransformer(encoder_model_spec, device="cuda", cache_folder="/data/haoyuhuang/model")
     for chunk in tqdm(chunks):
         embd = model.encode(chunk, convert_to_numpy=True)
         embeddings.append(embd)
@@ -63,9 +63,9 @@ def compute_embeddings(
 if __name__ == "__main__":
     args = parser_args()
     with open(args.dataset_path, "r") as file:
-        loaded_dataset = json.loads(file.read())
+        # loaded_dataset = json.loads(file.read())
 
-        dataset = [DataPoint(**line) for line in loaded_dataset]
+        dataset = [DataPoint(**json.loads(line)) for line in file]
     if args.model_name == "all-MiniLM-L6-v2":
         key_embeds = compute_embeddings(args.model_name, dataset, "key_string")
         value_embeds = compute_embeddings(args.model_name, dataset, "description")

@@ -342,7 +342,7 @@ if __name__ == "__main__":
     for data in perturbed_dataset:
         save_entity(data, os.path.join(args.output_path, args.perturbed_output_file))
 
-    # augment QA dataset
+    # augment QA dataset, open-ended question
     dataset = data_generator.augmenta_data_with_synthetic_QA(dataset)
     for data in dataset:
         save_entity(data, os.path.join(args.output_path, args.augmented_output_file))

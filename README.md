@@ -54,6 +54,19 @@ The description of {entity_name} is {description}.
 ```
 
 To generate KB embeddings, use `dataset_generation/generate_kb_embeddings.py`.
+```shell
+python generate_kb_embeddings.py \
+    --dataset_path /data/haoyuhuang/data/KBLaM/dataset/synthetic_data_QA.json \
+    --model_name all-MiniLM-L6-v2
+
+python create_train_test_split.py \
+    --data_path /data/haoyuhuang/data/KBLaM/dataset/synthetic_data_QA.json \
+    --embedding_keys_path /data/haoyuhuang/data/KBLaM/dataset/synthetic_data_all-MiniLM-L6-v2_embd_key.npy \
+    --embedding_values_path /data/haoyuhuang/data/KBLaM/dataset/synthetic_data_all-MiniLM-L6-v2_embd_value.npy \
+    --output_path /data/haoyuhuang/data/KBLaM/dataset/ \
+    --split_index 8
+```
+
 The embeddings we current support are [text-embedding-ada-002](https://openai.com/index/new-and-improved-embedding-model/) and [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2).
 
 
