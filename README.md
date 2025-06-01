@@ -40,6 +40,12 @@ To run the synthetic dataset construction, you will need a valid Azure OpenAI en
 
 To construct a synthetic KB and question-answer pairs use `dataset_generation/gen_synthetic_data.py`
 
+```shell
+python gen_synthetic_data.py \
+    --endpoint_url https://api.deepinfra.com/v1/openai \
+    --endpoint_api_key ***
+```
+
 The question-answer pairs are constructed in the form:
 
 ```
